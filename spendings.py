@@ -4,8 +4,11 @@ import csv
 import os
 import re
 import pandas as pd
+import operator
 
 from os import path
+
+import datetime
 
 '''
 
@@ -50,8 +53,6 @@ def make_combined_csv():
         df = df.drop(ORIGINAL_COLUMN_NAME, axis=1)
 
         dfs.append(df)
-    pass
-    import ipdb; ipdb.set_trace()
 
     full_df = concat_data_frames(dfs)
 
@@ -59,9 +60,18 @@ def make_combined_csv():
 
     new_df = sum_column(cleaned_df)
 
-    import ipdb; ipdb.set_trace()
+    save_to_file(new_df)
     
     pass
+
+def save_to_file(df):
+
+    now = datetime.datetime.now()
+
+    new_name = now.strftime('summary_%H%m.csv')
+
+    df.to_csv(new_name)
+
 
 def sum_column(df):
 
@@ -84,6 +94,31 @@ def concat_data_frames(dfs):
 
     return new_dataframe
     
+
+def derive_spendings_from_all_transactions(df):
+    '''
+Given df, from all transacrtions
+from spendings import derive_spendings_from_all_transactions
+df = pd.read_csv('2015_all_transactions/2015_all_transactions.csv')
+
+derive_spendings_from_all_transactions(df)
+
+    '''
+    exclude_categories = ['Investments', 'Interest Income', 'Income',
+            'Paycheck', 'Buy', 'Transfer', 
+            ]
+
+    query = reduce(operator.and_, [
+        (df['Category'] != category) 
+        for category in exclude_categories
+        
+        ])
+
+    df_expense_transactions = df[query]
+
+    #  401k contributions...
+    #       'Deposit', 
+    # 'Loans', 
 
 
 if __name__ == '__main__':
