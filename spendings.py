@@ -116,6 +116,23 @@ derive_spendings_from_all_transactions(df)
 
     df_expense_transactions = df[query]
 
+
+    # And for 'debit', negate that,
+    negate = lambda x: x*-1
+
+    '''
+    how to fill out only the 'credit' items ? 
+In [51]: df[df['Transaction Type'] == 'credit']['Amount'].map(negate).head()
+Out[51]: 
+1    -0.02
+2    -0.54
+3    -0.68
+4    -5.08
+5   -95.83
+Name: Amount, dtype: float64
+    '''
+    
+
     #  401k contributions...
     #       'Deposit', 
     # 'Loans', 
