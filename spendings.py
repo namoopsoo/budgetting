@@ -10,6 +10,7 @@ from os import path
 
 import datetime
 
+import settings
 '''
 
 
@@ -23,7 +24,6 @@ import datetime
 
 '''
 
-SOURCE_DIR = '/Users/michal/LeDocuments/finance/60percentbudget/2015_numbers'
 
 ORIGINAL_COLUMN_NAME = 'Spending'
 
@@ -31,7 +31,7 @@ TOTALS_COLUMN = 'total'
 
 def make_combined_csv():
 
-    source_files = os.listdir(SOURCE_DIR)
+    source_files = os.listdir(settings.SOURCE_DIR)
 
     csv_files = [_file for _file in source_files if re.match(r'2015.*\.csv', _file)]
 
@@ -44,7 +44,7 @@ def make_combined_csv():
 
         new_column_name = csv_file.split('.')[0]
 
-        csv_file = path.join(SOURCE_DIR, csv_file)
+        csv_file = path.join(settings.SOURCE_DIR, csv_file)
 
         df = pd.read_csv(csv_file, index_col='Dates') #, parse_dates=True)
 
