@@ -29,6 +29,10 @@ ORIGINAL_COLUMN_NAME = 'Spending'
 
 TOTALS_COLUMN = 'total'
 
+EXPENSE_CATEGORIES = [
+        'State Tax', 'Mobile Phone', 'Pantalones Fancy', 'Pharmacy', 'Student Loan', 'Music', 'Fast Food', 'Home Supplies', 'TheRent', 'Shopping', 'Dessert', 'Gym', 'Coffee Shops', 'Fees & Charges', 'Utilities', 'ATM Fee', 'Electronics & Software', 'BooksMagazines', 'Incidental ZipCar', 'Charity', 'Wash & Fold', 'Television', 'Furnishings', 'Gift', 'Business Services', 'club', 'Financial Advisor', 'Food & Dining', 'Federal & State Tax', 'Uncategorized', 'SportsForHealth', 'Sports', 'Restaurants', 'Movies & DVDs', 'Public transit', 'Haircut', 'BarsAndAlcohol', 'Books', 'Groceries', 'Hobbies', 'Sports Fun', 'Clothing', 'Amusement']
+
+
 def make_combined_csv():
 
     source_files = os.listdir(settings.SOURCE_DIR)
@@ -42,7 +46,7 @@ def make_combined_csv():
 
     for csv_file in csv_files:
 
-        new_column_name = csv_file.split('.')[0]
+        new_column_name = csv_file.split('.')[1]
 
         csv_file = path.join(settings.SOURCE_DIR, csv_file)
 
@@ -93,7 +97,39 @@ def concat_data_frames(dfs):
     new_dataframe = pd.concat(dfs, axis=1)
 
     return new_dataframe
+
+def make_query_from_categories(df, categories):
+    query = reduce(operator.or_, [
+        (df['Category'] == category) 
+        for category in categories
+        ])
     
+    return query
+
+def get_month(i):
+    return i.month + i.year
+
+def annotate_make_month_col(df):
+    df['Month'] = df['Date'].apply(get_month)
+    return df 
+
+
+def annotate_negate_credits(df):
+    '''
+    Make credits negative, but only for expense categories
+    '''
+    negate = lambda x: x*-1
+
+    query = make_query_from_categories(df, EXPENSE_CATEGORIES)
+    
+    amounts = df[df['Transaction Type'] == 'credit' ][query]['Amount']
+
+    amounts_negateds = amounts.map(negate)
+
+    df[df['Transaction Type'] == 'credit' ][query]['Amount'] = amounts_negateds
+
+
+    return df
 
 def derive_spendings_from_all_transactions(df):
     '''
@@ -103,16 +139,28 @@ df = pd.read_csv('2015_all_transactions/2015_all_transactions.csv')
 
 derive_spendings_from_all_transactions(df)
 
+
+- This is using a file all_transactions.csv  , with columns:
+
+    Date: 12/31/15
+    Description: string
+    Amount: float
+    Transaction Type: debit, credit
+    Category: Restaurants, Interest Income, ...
+    Account Name: Visa Platinum, contingency, ...
+
+
     '''
-    exclude_categories = ['Investments', 'Interest Income', 'Income',
-            'Paycheck', 'Buy', 'Transfer', 
+    exclude_categories = ['Investments', 
+            'Buy', 'Transfer', 'Credit Card Payment', 'Transfer for Cash Spending',
             ]
 
-    query = reduce(operator.and_, [
-        (df['Category'] != category) 
-        for category in exclude_categories
-        
-        ])
+    income_categories = ['Interest Income', 'Income',
+            'Paycheck', 
+            ]
+
+    expense_categories = []
+
 
     df_expense_transactions = df[query]
 
