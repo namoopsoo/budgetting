@@ -22,6 +22,8 @@ import settings
 - after joining all csvs, create a total spendings column.
 - and nice to get more fine-grained, like percentages for sums of specific columns (aka categories).
 
+- wish item for wishlist: do some clever budget balancing maths with the 'Credit Card Payment' type.
+
 '''
 
 
@@ -30,7 +32,10 @@ ORIGINAL_COLUMN_NAME = 'Spending'
 TOTALS_COLUMN = 'total'
 
 EXPENSE_CATEGORIES = [
-        'State Tax', 'Mobile Phone', 'Pantalones Fancy', 'Pharmacy', 'Student Loan', 'Music', 'Fast Food', 'Home Supplies', 'TheRent', 'Shopping', 'Dessert', 'Gym', 'Coffee Shops', 'Fees & Charges', 'Utilities', 'ATM Fee', 'Electronics & Software', 'BooksMagazines', 'Incidental ZipCar', 'Charity', 'Wash & Fold', 'Television', 'Furnishings', 'Gift', 'Business Services', 'club', 'Financial Advisor', 'Food & Dining', 'Federal & State Tax', 'Uncategorized', 'SportsForHealth', 'Sports', 'Restaurants', 'Movies & DVDs', 'Public transit', 'Haircut', 'BarsAndAlcohol', 'Books', 'Groceries', 'Hobbies', 'Sports Fun', 'Clothing', 'Amusement']
+        'State Tax', 'Mobile Phone', 'Pantalones Fancy', 'Pharmacy', 'Student Loan', 'Music', 'Fast Food', 'Home Supplies', 'TheRent', 'Shopping', 'Dessert', 'Gym', 'Coffee Shops', 'Fees & Charges', 'Utilities', 'ATM Fee', 'Electronics & Software', 'BooksMagazines', 'Incidental ZipCar', 'Charity', 'Wash & Fold', 'Television', 'Furnishings', 'Gift', 'Business Services', 'club', 'Financial Advisor', 'Food & Dining', 'Federal & State Tax', 'Uncategorized', 'SportsForHealth', 'Sports', 'Restaurants', 'Movies & DVDs', 'Public transit', 'Haircut', 'BarsAndAlcohol', 'Books', 'Groceries', 'Hobbies', 'Sports Fun', 'Clothing', 'Amusement',
+        'Home Improvement', 'Late Night Taxi', 'GreyHound', 'FriendLoan', 'Doctor',
+        'Home Services', 'Shipping', 'Workshops/Seminars', 'FianceLoan',
+        'Vacation Gas Pers', 'Vacation Travel Pers', 'Vacation Hotel Pers']
 
 OTHER_EXPENSE_CATEGORIES = [
 
@@ -75,6 +80,7 @@ EXPENSE_CATEGORY_PARENTS = {
             'Buy', 'Transfer', 'Credit Card Payment',
             'Transfer for Cash Spending',
             ],
+        'Income': ['Interest Income', 'Paycheck'],
     }
 '''
 oops... still need to account for parents for these...
@@ -170,8 +176,8 @@ def make_query_from_categories(df, categories):
     
     return query
 
-def get_month(i):
-    return '{}-{}'.format(i.year, i.month)
+def get_month(d):
+    return '{}-{}'.format(d.year, str(d.month).zfill(2))
 
 def annotate_make_month_col(df):
     ''' Add an extra column for the YYYY-MM month.
@@ -201,22 +207,47 @@ def derive_df_with_aggregated_spendings_per_category_per_month(
 
     '''
 
-def make_df_with_month_category_aggregates(df):
+
+def remove_some_cols(df):
+    df = df.drop(labels=['Original Description', 'Labels', 'Notes'], axis=1)
+    return df
+
+
+def make_df_with_month_category_aggregates(df_original):
+    '''
+    Expecting an input df which comes from a csv dump of all transactions from Mint.
+    '''
 
     # TODO ... may actually want to exclude some categories...
+    df_0 = remove_some_cols(df_original)
 
-    df_1 = annotate_make_month_col(df) 
-    grp = df_1.groupby(by=['Month', 'Category'])
+    # Negate those credits...
+    df_1 = annotate_negate_credits(df_0)
+    df_1.to_csv('data/df_1_2009-2016.{}.csv'.format(make_timestamp()))
+
+    df_2 = annotate_make_month_col(df_1) 
+    grp = df_2.groupby(by=['Month', 'Category'])
     df_1_sums = grp.aggregate({'Amount': sum})
-    df_1_sums.to_csv('data/sums_df_1_2009-2016.csv')
+    df_1_sums.to_csv('data/df_1_sums_2009-2016.{}.csv'.format(make_timestamp()))
 
-    df_2 = annotate_parent_categories(df_1)
+    df_3 = annotate_parent_categories(df_2)
+    df_3.to_csv('data/df_3_2009-2016.{}.csv'.format(make_timestamp()))
 
-    grp2 = df_2.groupby(by=['Month', 'Parent Category'])
-    df_2_sums = grp2.aggregate({'Amount': sum})
-    df_2_sums.to_csv('data/sums_df_2_2009-2016.csv')
+    grp3 = df_3.groupby(by=['Month', 'Parent Category'])
+    df_3_sums = grp3.aggregate({'Amount': sum})
+    df_3_sums.to_csv('data/df_3_sums_2009-2016.{}.csv'.format(make_timestamp()))
 
 
+def main_driver_example():
+
+    df = read_mint_csv('data/2009_01-2016_10_transactions.csv')
+    make_df_with_month_category_aggregates(df)
+
+    pass
+
+
+def make_timestamp():
+    return datetime.datetime.now().strftime('%Y-%m-%dT%H%M')
 
 
 def annotate_negate_credits(df):
@@ -226,15 +257,17 @@ def annotate_negate_credits(df):
     negate = lambda x: x*-1
 
     query = make_query_from_categories(df, EXPENSE_CATEGORIES)
-    
     amounts = df[df['Transaction Type'] == 'credit' ][query]['Amount']
-
     amounts_negateds = amounts.map(negate)
 
-    df[df['Transaction Type'] == 'credit' ][query]['Amount'] = amounts_negateds
+    # This below method didnt work.
+    # df[df['Transaction Type'] == 'credit' ][query]['Amount'] = amounts_negateds
 
+    # But this did.
+    df.loc[((df['Transaction Type'] == 'credit') & query), 'Amount'] = amounts_negateds
 
     return df
+
 
 def derive_spendings_from_all_transactions(df):
     '''
@@ -296,13 +329,14 @@ def combine_queries(df, queries):
     return query
 
 
-def blah_read_mint_csv(csv_file):
+def read_mint_csv(csv_file):
     ''' Read a mint csv file,
     with Date being the col that has the mm/dd/yyyy transaction date.
     '''
-
     df = pd.read_csv(csv_file, parse_dates=['Date'])
+    return df
 
+def cool_date_query_example(df):
     jun1 = datetime.date( 2016,6,1)
     df[df['Date'] < jun1][['Date', 'Amount', 'Category']].head()
 
