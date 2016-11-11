@@ -52,7 +52,7 @@ EXPENSE_CATEGORY_PARENTS = {
         'Entertainment': [
             'Pantalones Fancy', 'Late Night Taxi',
             'BarsAndAlcohol', 'Amusement', 'BooksMagazines', 'Books',
-            'Music',
+            'Music', 'Fun Electronics',
             ],
         'Taxes': [
             'Federal & State Tax', 'State Tax',
@@ -74,13 +74,20 @@ EXPENSE_CATEGORY_PARENTS = {
             'Groceries', 'Restaurants', 'Coffee Shops'
             ],
         'Gifts & Donations': ['Gift'],
-        'Shopping': ['Clothing', 
+        'Shopping': ['Clothing', 'Electronics & Software',
+            'Shopping',
             ],
         'Transfer': ['Investments', 
             'Buy', 'Transfer', 'Credit Card Payment',
             'Transfer for Cash Spending',
             ],
         'Income': ['Interest Income', 'Paycheck'],
+        'Fees & Charges': ['ATM Fee', ],
+        'Business Services': ['Legal', 'Document Shredding',
+            'Office Supplies'],
+
+
+        # 
     }
 '''
 oops... still need to account for parents for these...
@@ -239,10 +246,16 @@ def make_df_with_month_category_aggregates(df_original):
 
 
 def main_driver_example():
-
-    df = read_mint_csv('data/2009_01-2016_10_transactions.csv')
+    df = read_mint_csv('data/2009_01-2016_11_transactions.csv')
     make_df_with_month_category_aggregates(df)
 
+    # Then on a jupyter notebook, I was able to use ...
+    # ax = df.groupby(["Parent Category", "Month"]).mean().unstack("Parent Category").plot()
+    # and this gave a nice time series plot. But only after using the required preamble...
+    #
+    # %matplotlib inline
+    # df = pd.read_csv('data/df_3_sums_2009-2016.2016-11-11T1302.csv')
+    # ...
     pass
 
 
