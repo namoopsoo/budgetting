@@ -1,5 +1,5 @@
 
-
+import sys
 import csv
 import os
 import re
@@ -228,25 +228,44 @@ def make_df_with_month_category_aggregates(df_original):
     # TODO ... may actually want to exclude some categories...
     df_0 = remove_some_cols(df_original)
 
+
+    path.join(settings.SOURCE_DIR, source_file)
+
     # Negate those credits...
     df_1 = annotate_negate_credits(df_0)
-    df_1.to_csv('data/df_1_2009-2016.{}.csv'.format(make_timestamp()))
+    df_1.to_csv('{}/df_1_2009-2016.{}.csv'.format(settings.SOURCE_DIR, make_timestamp()))
 
     df_2 = annotate_make_month_col(df_1) 
     grp = df_2.groupby(by=['Month', 'Category'])
     df_1_sums = grp.aggregate({'Amount': sum})
-    df_1_sums.to_csv('data/df_1_sums_2009-2016.{}.csv'.format(make_timestamp()))
+    df_1_sums.to_csv('{}/df_1_sums_2009-2016.{}.csv'.format(settings.SOURCE_DIR, make_timestamp()))
 
     df_3 = annotate_parent_categories(df_2)
-    df_3.to_csv('data/df_3_2009-2016.{}.csv'.format(make_timestamp()))
+    df_3.to_csv('{}/df_3_2009-2016.{}.csv'.format(settings.SOURCE_DIR, make_timestamp()))
 
     grp3 = df_3.groupby(by=['Month', 'Parent Category'])
     df_3_sums = grp3.aggregate({'Amount': sum})
-    df_3_sums.to_csv('data/df_3_sums_2009-2016.{}.csv'.format(make_timestamp()))
+    df_3_sums.to_csv('{}/df_3_sums_2009-2016.{}.csv'.format(settings.SOURCE_DIR, make_timestamp()))
 
 
-def main_driver_example():
-    df = read_mint_csv('data/2009_01-2016_11_transactions.csv')
+def grocery_store_pivot_table(df):
+    stores = ['Whole Foods', "Trader Joe's", 'Fairway', 'Costco',
+            'Amazon', 'Amazon Fresh',
+            'Costco Whole Foods', 'Fresh Market', 
+            ]
+    df = dfgroceries_12mo
+    pivot = pd.DataFrame.pivot_table(df, 
+            values='Amount', index='Month', 
+            columns='Description', aggfunc=np.sum)
+    return pivot
+
+
+def main_driver_example(source_file):
+    import ipdb; ipdb.set_trace()
+    source_file = path.join(settings.SOURCE_DIR, source_file)
+
+    # 'data/2009_01-2016_11_transactions.csv'
+    df = read_mint_csv(source_file)
     make_df_with_month_category_aggregates(df)
 
     # Then on a jupyter notebook, I was able to use ...
@@ -379,5 +398,9 @@ def get_data_for_categories(df):
 
 
 if __name__ == '__main__':
-    make_combined_csv()
+    if len (sys.argv) != 2:
+        sys.exit('format: foo.py transactions.csv')
+
+    source_file = sys.argv[1]
+    main_driver_example(source_file)
 
